@@ -96,8 +96,6 @@ int receive_packet(SOCKET&, char*, int, SOCKADDR_IN&);
 
 int parse_response(char *, int, SOCKADDR_IN *, int);
 
-void print_host_name_addr(hostent*, SOCKADDR_IN*);
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // добачить флаги в командной строке
 // добавить  --help

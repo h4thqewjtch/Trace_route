@@ -32,7 +32,7 @@ int main(int argc, char **argv)
     }
     catch (LocalException localException)
     {
-        std::cout << localException.what() << std::endl;
+        std::cerr << localException.what() << std::endl;
     }
     catch (const std::exception &exception)
     {
@@ -253,41 +253,25 @@ int parse_response(char *response, int receivedBytes, SOCKADDR_IN *addressFrom, 
     IPHeader *ipHeader = (IPHeader *)response;
     USHORT ipHeaderLength = ipHeader->headerLength * 4;
     ICMPHeader *icmpHeader = (ICMPHeader *)(response + ipHeaderLength);
+    std::string responseAddress = std::string(inet_ntoa(addressFrom->sin_addr));
     int returnValue = 1;
-    struct hostent *hostInfo = gethostbyaddr((const char *)&addressFrom->sin_addr,
-                                             AF_INET,
-                                             sizeof(addressFrom->sin_addr));
     std::cout << std::setw(2) << timeToLive << "\t";
     if (icmpHeader->messageType == 0)
     {
-        print_host_name_addr(hostInfo, addressFrom);
-        std::cout << " - destination address" << std::endl;
+        std::cout << responseAddress << " - destination address" << std::endl;
     }
     else if (icmpHeader->messageType == 11)
     {
-        print_host_name_addr(hostInfo, addressFrom);
-        std::cout << std::endl;
+        std::cout << responseAddress << std::endl;
         returnValue = 0;
     }
     else
     {
+        std::cout << responseAddress << std::endl;
         std::cout << "ICMP Message Type: " << icmpHeader->messageType << std::endl
                   << "\t\t" << icmpMessageTypesMap[icmpHeader->messageType] << std::endl
                   << "\tICMP Message Code: " << icmpHeader->messageCode << std::endl
                   << "\t\t" << icmpMessageCodesMap[icmpHeader->messageCode] << std::endl;
     }
     return returnValue;
-}
-
-void print_host_name_addr(hostent *hostInfo, SOCKADDR_IN *addressFrom)
-{
-    if (hostInfo != NULL)
-    {
-
-        std::cout << hostInfo->h_name << " [" << inet_ntoa(addressFrom->sin_addr) << "]";
-    }
-    else
-    {
-        std::cout << inet_ntoa(addressFrom->sin_addr);
-    }
 }

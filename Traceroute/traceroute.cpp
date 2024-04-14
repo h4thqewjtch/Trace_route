@@ -2,101 +2,75 @@
 
 int main(int argc, char **argv)
 {
-
-    if (check_command_line_arguments(argc) == -1)
+    SOCKET socket = INVALID_SOCKET;
+    try
     {
-        return -1;
-    }
-    WSADATA wsaData;
-    if (wsa_startup(wsaData) == -1)
-    {
-        return -1;
-    }
-    int hopsNumber = get_nodes_number(argc, argv);
-    SOCKET socket;
-    if (create_socket(socket) == -1)
-    {
-        WSACleanup();
-        return -1;
-    }
-    if (set_socket_timeout(socket, 1000, SO_RCVTIMEO) == -1)
-    {
-        closesocket(socket);
-        WSACleanup();
-        return -1;
-    }
-    if (set_socket_timeout(socket, 1000, SO_SNDTIMEO) == -1)
-    {
-        closesocket(socket);
-        WSACleanup();
-        return -1;
-    }
-    SOCKADDR_IN destinationAddress;
-    if (set_destination_address(destinationAddress, argv[1]) == -1)
-    {
-        closesocket(socket);
-        WSACleanup();
-        return -1;
-    }
-    if (set_socket_routing(socket) == -1) // to bypass the standard routing mechanisms
-    {                               
-        closesocket(socket);
-        WSACleanup();
-        return -1;
-    }
-    std::cout << std::endl
-              << "Tracing route to " << argv[1]
-              << " with a maximum number of hops " << hopsNumber
-              << ":" << std::endl
-              << std::endl;
-    if (trace_route(socket, destinationAddress, hopsNumber) == -1)
-    {
+        check_command_line_arguments(argc);
+        WSADATA wsaData;
+        wsa_startup(wsaData);
+        create_socket(socket);
+        set_socket_timeout(socket,
+                           1000,
+                           SO_RCVTIMEO);
+        set_socket_timeout(socket,
+                           1000,
+                           SO_SNDTIMEO);
+        SOCKADDR_IN destinationAddress;
+        set_destination_address(destinationAddress,
+                                argv[1]);
+        set_socket_routing(socket);
         std::cout << std::endl
-                  << "Tracing route aborted" << std::endl
+                  << "Tracing route to " << argv[1]
+                  << " with a maximum number of hops 50:"
+                  << std::endl
                   << std::endl;
-    }
-    else
-    {
+        trace_route(socket,
+                    destinationAddress);
         std::cout << std::endl
                   << "Tracing route finished" << std::endl
                   << std::endl;
     }
-    closesocket(socket);
+    catch (LocalException localException)
+    {
+        std::cout << localException.what() << std::endl;
+    }
+    catch (const std::exception &exception)
+    {
+        std::cerr << "Standard exception: " << exception.what() << std::endl
+                  << "Tracing route aborted" << std::endl
+                  << std::endl;
+    }
+    catch (...)
+    {
+        std::cerr << "Something went wrong" << std::endl
+                  << "Tracing route aborted" << std::endl
+                  << std::endl;
+    }
+    if (socket != INVALID_SOCKET)
+    {
+        closesocket(socket);
+    }
     WSACleanup();
     return 0;
 }
 
-int check_command_line_arguments(int argc)
+void check_command_line_arguments(int argc)
 {
     if (argc < 2)
     {
-        std::cout << "Destination address does not exist" << std::endl;
-        return -1; // throw
+        throw LocalException("Destination address does not exist");
     }
-    return 0;
 }
 
-int wsa_startup(WSADATA &wsaData)
+void wsa_startup(WSADATA &wsaData)
 {
     if (WSAStartup(MAKEWORD(2, 2), &wsaData))
     {
-        std::cout << "WSAStartup() in wsa_startup() failed with error " << WSAGetLastError() << std::endl;
-        return -1; // throw
+        throw LocalException("WSAStartup() in wsa_startup() failed with error " + std::to_string(WSAGetLastError()));
     }
-    return 0;
 }
 
-int get_nodes_number(int argc, char **argv)
-{
-    int hopsNumber;
-    if (argc < 3 || (hopsNumber = atoi(argv[2])) == 0)
-    {
-        hopsNumber = 50;
-    }
-    return hopsNumber;
-}
-
-int create_socket(SOCKET &socket)
+void create_socket(SOCKET &socket)
 {
     socket = WSASocket(AF_INET,
                        SOCK_RAW,
@@ -106,13 +80,11 @@ int create_socket(SOCKET &socket)
                        WSA_FLAG_OVERLAPPED);
     if (socket == INVALID_SOCKET)
     {
-        std::cout << "WSASocket() in create_socket() failed with error " << WSAGetLastError() << std::endl;
-        return -1; // throw
+        throw LocalException("WSASocket() in create_socket() failed with error " + std::to_string(WSAGetLastError()));
     }
-    return 0;
 }
 
-int set_socket_timeout(SOCKET socket, int timeout, int timeoutType)
+void set_socket_timeout(SOCKET socket, int timeout, int timeoutType)
 {
     int setsockoptReturnValue = setsockopt(socket,
                                            SOL_SOCKET,
@@ -121,14 +93,11 @@ int set_socket_timeout(SOCKET socket, int timeout, int timeoutType)
                                            sizeof(timeout));
     if (setsockoptReturnValue == SOCKET_ERROR)
     {
-        std::cout << "setsockopt() in set_socket_timeout() failed with error "
-                  << WSAGetLastError() << std::endl;
-        return -1; // throw
+        throw LocalException("setsockopt() in set_socket_timeout() failed with error " + std::to_string(WSAGetLastError()));
     }
-    return 0;
 }
 
-int set_destination_address(SOCKADDR_IN &destinationAddress, char *hostName)
+void set_destination_address(SOCKADDR_IN &destinationAddress, char *hostName)
 {
     ZeroMemory(&destinationAddress, sizeof(destinationAddress));
     destinationAddress.sin_family = AF_INET;
@@ -139,18 +108,14 @@ int set_destination_address(SOCKADDR_IN &destinationAddress, char *hostName)
             memcpy(&(destinationAddress.sin_addr), hostInfo->h_addr, hostInfo->h_length);
         else
         {
-            std::cout << "gethostbyname() in set_destination_address() failed with error "
-                      << WSAGetLastError() << std::endl;
-            return -1; // throw
+            throw LocalException("gethostbyname() in set_destination_address() failed with error " + std::to_string(WSAGetLastError()));
         }
     }
-    return 0;
 }
 
-int set_socket_routing(SOCKET socket)
+void set_socket_routing(SOCKET socket)
 {
-    //  Set the socket to bypass the standard routing mechanisms
-    //  i.e. use the local protocol stack to the appropriate network interface
+    //  to bypass the standard routing mechanisms
 
     BOOL optVal = TRUE;
     int setsockoptReturnValue = setsockopt(socket,
@@ -160,23 +125,19 @@ int set_socket_routing(SOCKET socket)
                                            sizeof(BOOL));
     if (setsockoptReturnValue == SOCKET_ERROR)
     {
-        std::cout << "setsockopt() in set_socket_routing() failed with error "
-                  << WSAGetLastError() << std::endl;
-        return -1;
+        throw LocalException("setsockopt() in set_socket_routing() failed with error " + std::to_string(WSAGetLastError()));
     }
-    return 0;
 }
 
-int trace_route(SOCKET &socket, SOCKADDR_IN &destinationAddress, int hopsNumber)
+void trace_route(SOCKET &socket, SOCKADDR_IN &destinationAddress)
 {
     char sendBuffer[1024]{};
     char receiveBuffer[1024]{};
-    // int dataSize = sizeof(ULONG) + sizeof(ICMPHeader);
     int dataSize = sizeof(ICMPHeader);
     int quit = 0, seqNumber = 0;
     SOCKADDR_IN sourceAddress;
     int sourceAddressLength = sizeof(sourceAddress);
-    for (int timeToLive = 1; timeToLive <= hopsNumber && !quit; timeToLive++)
+    for (int timeToLive = 1; timeToLive <= 50 && !quit; timeToLive++)
     {
         set_time_to_live(socket, timeToLive);
         set_send_buffer(sendBuffer, dataSize, seqNumber);
@@ -191,14 +152,6 @@ int trace_route(SOCKET &socket, SOCKADDR_IN &destinationAddress, int hopsNumber)
                       << "\ttime to send packet has been exceeded" << std::endl;
             continue;
         }
-        else if (sentBytes == -1)
-        {
-            std::cout << std::setw(2) << timeToLive
-                      << "\tsendto() failed with error "
-                      << WSAGetLastError()
-                      << std::endl;
-            return -1;
-        }
         int receivedBytes = receive_packet(socket,
                                            receiveBuffer,
                                            1024,
@@ -209,21 +162,12 @@ int trace_route(SOCKET &socket, SOCKADDR_IN &destinationAddress, int hopsNumber)
                       << "\ttime to receive packet has been exceeded" << std::endl;
             continue;
         }
-        else if (receivedBytes == -1)
-        {
-            std::cout << std::setw(2) << timeToLive
-                      << "\trecvfrom() failed with error "
-                      << WSAGetLastError()
-                      << std::endl;
-            return -1;
-        }
         quit = parse_response(receiveBuffer, receivedBytes, &sourceAddress, timeToLive);
         Sleep(1000);
     }
-    return 0;
 }
 
-int set_time_to_live(SOCKET socket, int timeToLive)
+void set_time_to_live(SOCKET socket, int timeToLive)
 {
     int setsockoptReturnValue = setsockopt(socket,
                                            IPPROTO_IP,
@@ -232,12 +176,8 @@ int set_time_to_live(SOCKET socket, int timeToLive)
                                            sizeof(timeToLive));
     if (setsockoptReturnValue == SOCKET_ERROR)
     {
-        std::cout << std::setw(2) << timeToLive
-                  << "\tsetsockopt() in set_time_to_live() failed with error "
-                  << WSAGetLastError() << std::endl;
-        return -1;
+        throw LocalException("setsockopt() in set_time_to_live() failed with error " + std::to_string(WSAGetLastError()));
     }
-    return 0;
 }
 
 void set_send_buffer(char *sendBuffer, int dataSize, int seqNumber)
@@ -283,7 +223,7 @@ int send_packet(SOCKET &socket, char *sendBuffer, int dataSize, SOCKADDR_IN &add
         {
             return -2;
         }
-        return -1;
+        throw LocalException("sendto() failed with error " + std::to_string(WSAGetLastError()));
     }
     return sentBytes;
 }
@@ -303,7 +243,7 @@ int receive_packet(SOCKET &socket, char *receiveBuffer, int dataSize, SOCKADDR_I
         {
             return -2;
         }
-        return -1;
+        throw LocalException("recvfrom() failed with error " + std::to_string(WSAGetLastError()));
     }
     return receivedBytes;
 }
@@ -339,7 +279,7 @@ int parse_response(char *response, int receivedBytes, SOCKADDR_IN *addressFrom, 
     return returnValue;
 }
 
-void print_host_name_addr(hostent* hostInfo, SOCKADDR_IN* addressFrom)
+void print_host_name_addr(hostent *hostInfo, SOCKADDR_IN *addressFrom)
 {
     if (hostInfo != NULL)
     {

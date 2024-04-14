@@ -1,12 +1,13 @@
-#include <iostream>
+#pragma once
+
+#include "exception.h"
+
 #include <iomanip>
 #include <map>
+#include <string>
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
- 
-#include <stdio.h>
-#include <stdlib.h>
  
 #pragma comment(lib, "ws2_32.lib")
 
@@ -69,23 +70,21 @@ struct IPHeader
 };
 
 
-int check_command_line_arguments(int);
+void check_command_line_arguments(int);
 
-int wsa_startup(WSADATA &);
+void wsa_startup(WSADATA &);
 
-int get_nodes_number(int, char **);
+void create_socket(SOCKET &);
 
-int create_socket(SOCKET &);
+void set_socket_timeout(SOCKET, int, int);
 
-int set_socket_timeout(SOCKET, int, int);
+void set_destination_address(SOCKADDR_IN&, char*);
 
-int set_destination_address(SOCKADDR_IN&, char*);
+void set_socket_routing(SOCKET);
 
-int set_socket_routing(SOCKET);
+void trace_route(SOCKET&, SOCKADDR_IN&);
 
-int trace_route(SOCKET&, SOCKADDR_IN&, int);
-
-int set_time_to_live(SOCKET, int);
+void set_time_to_live(SOCKET, int);
 
 void set_send_buffer(char *, int, int);
 
@@ -100,6 +99,5 @@ int parse_response(char *, int, SOCKADDR_IN *, int);
 void print_host_name_addr(hostent*, SOCKADDR_IN*);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// добавить исключения
 // добачить флаги в командной строке
 // добавить  --help

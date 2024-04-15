@@ -31,7 +31,20 @@ CMake suite maintained and supported by Kitware (kitware.com/cmake).
 
    Чтобы убедиться, повторно введите команду ```cmake --version```.
 
-В командной строке перейдите в папку проекта ```Trace_route```, а затем в её внутреннюю папку ```build```.
+В командной строке перейдите в папку проекта ```Trace_route```.
+
+Для запуска тестов (и успешной сборки проекта) необходимо, находясь в папке Trace_route, склонировать GitHub-репозиторий googletest, используя команду:
+```
+git clone http://github.com/google/googletest.git
+```
+В папке Trace_route создайте внутреннюю папку ```build```с помощью команды:
+```
+mkdir build
+```
+Перейдите в папку build, введя команду:
+```
+cd build
+```
 
 В папке Trace_route/build ведите команду:
 ```
